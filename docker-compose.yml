@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: collab
+    ports: ["5436:5432"]
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d collab"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+  api:
+    build: ./api
+    ports: ["5002:5000"]
+    environment:
+      DSN: postgresql://lab:lab@db:5432/collab
+      # ms of simulated network latency per query. 0 = this laptop
+      # (unrealistically fast). 0.4 = a normal app-to-database hop.
+      LATENCY_MS: "0.4"
+    depends_on:
+      db: { condition: service_healthy }
+volumes:
+  pgdata:
